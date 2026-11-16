@@ -36,6 +36,13 @@ infra/aws-emulator/*.pem
 infra/aws-emulator/credentials
 ~/.aws/emulator/
 
+# Secrets / certificates (global catch-all)
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
 # macOS
 .DS_Store
 
