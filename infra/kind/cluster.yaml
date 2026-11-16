@@ -1,0 +1,13 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: incidentforge
+nodes:
+  - role: control-plane
+    # Single node is sufficient for MVP scenarios.
+    # Keeps resource use low on a developer workstation.
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "incidentforge.io/node=control-plane"

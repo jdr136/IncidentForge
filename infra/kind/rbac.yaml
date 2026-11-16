@@ -1,0 +1,92 @@
+# RBAC for IncidentForge
+# Applied once during `make bootstrap`.
+# Creates two ServiceAccounts with minimal permissions.
+---
+# ── Observation ServiceAccount (read-only, for the LLM tool gateway) ─────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: incidentforge-observer
+  namespace: default
+  labels:
+    app.kubernetes.io/part-of: incidentforge
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: incidentforge-observer
+  labels:
+    app.kubernetes.io/part-of: incidentforge
+rules:
+  # Read-only access to workload resources.
+  # Intentionally excludes Secrets and all write verbs.
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: incidentforge-observer
+  labels:
+    app.kubernetes.io/part-of: incidentforge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: incidentforge-observer
+subjects:
+  - kind: ServiceAccount
+    name: incidentforge-observer
+    namespace: default
+---
+# ── Controller ServiceAccount (trusted, for scenario setup/teardown) ─────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: incidentforge-controller
+  namespace: default
+  labels:
+    app.kubernetes.io/part-of: incidentforge
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: incidentforge-controller
+  labels:
+    app.kubernetes.io/part-of: incidentforge
+rules:
+  # Namespaced create/patch/delete of scenario-owned resources only.
+  # Never grants cluster-admin or access to Secrets.
+  - apiGroups: [""]
+    resources: ["namespaces", "pods", "services", "configmaps"]
+    verbs: ["get", "list", "create", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "create", "patch", "delete"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "create", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: incidentforge-controller
+  labels:
+    app.kubernetes.io/part-of: incidentforge
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: incidentforge-controller
+subjects:
+  - kind: ServiceAccount
+    name: incidentforge-controller
+    namespace: default
