@@ -1,0 +1,48 @@
+schema_version: "1.1"
+id: k8s-service-selector
+version: 1
+title: "Service routes to no pods"
+environment: kubernetes
+difficulty: beginner
+
+public:
+  summary: >
+    The API pods are healthy and running, but the Service has zero ready
+    endpoints. Requests to the Service are failing even though the pods
+    themselves are ready.
+  target: >
+    Determine why the Service has no backends and propose the correct
+    configuration fix.
+
+setup:
+  fixture: "fixtures/api-healthy.yaml"
+  baseline_checks:
+    - type: k8s.deployment_available
+      ref: api
+    - type: k8s.service_has_ready_endpoint
+      ref: api
+
+fault:
+  action: k8s.patch_service_selector
+  ref: api-service
+  parameters:
+    selector:
+      app: api-broken   # original label is "app: api"
+  manifestation_checks:
+    - type: k8s.service_no_ready_endpoints
+      ref: api-service
+
+private_expected:
+  allowed_root_cause_ids:
+    - "K8S_SERVICE_SELECTOR_MISMATCH"
+    - "K8S_ENDPOINT_SELECTION_FAILURE"
+  required_evidence_types:
+    - k8s.get_service
+    - k8s.list_pods
+  allowed_remediations:
+    - k8s.set_service_selector
+  post_fix_checks:
+    - type: k8s.service_has_ready_endpoint
+      ref: api-service
+    - type: k8s.deployment_available
+      ref: api

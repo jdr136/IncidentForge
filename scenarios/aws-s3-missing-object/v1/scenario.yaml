@@ -1,0 +1,51 @@
+schema_version: "1.1"
+id: aws-s3-missing-object
+version: 1
+title: "Application config object missing from S3"
+environment: aws
+difficulty: beginner
+
+# P1 by default. Promoted to P0 only after emulator smoke test passes.
+# See docs/architecture-review.md §2.8
+
+public:
+  summary: >
+    The application is unable to load its configuration. An S3 GetObject
+    call for a known configuration key is returning NoSuchKey. The bucket
+    exists and is accessible.
+  target: >
+    Identify the missing object and propose how to restore the application
+    configuration.
+
+setup:
+  fixture: "fixtures/s3-config-healthy.yaml"
+  baseline_checks:
+    - type: aws.s3.object_exists
+      ref: config-object
+    - type: aws.s3.object_readable
+      ref: config-object
+
+fault:
+  action: aws.s3.delete_object
+  ref: config-object
+  parameters: {}
+  manifestation_checks:
+    - type: aws.s3.object_not_found
+      ref: config-object
+
+private_expected:
+  allowed_root_cause_ids:
+    - "AWS_S3_MISSING_OBJECT"
+    - "AWS_S3_CONFIG_DELETED"
+  required_evidence_types:
+    - aws.s3.head_object
+    - aws.s3.list_objects
+  allowed_remediations:
+    - aws.s3.restore_fixture_object
+  post_fix_checks:
+    - type: aws.s3.object_exists
+      ref: config-object
+    - type: aws.s3.object_checksum_matches
+      ref: config-object
+      parameters:
+        expected_sha256: "fixture"  # resolved by controller to actual fixture hash

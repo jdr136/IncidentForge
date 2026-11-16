@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://incidentforge/schemas/run_event/v1.0.json",
+  "title": "IncidentForge Run Event (SSE payload)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "run_id", "seq", "at", "type", "stage", "message"],
+  "properties": {
+    "id":     { "type": "integer", "description": "DB auto-increment. Global across all runs." },
+    "run_id": { "type": "string" },
+    "seq":    { "type": "integer", "minimum": 1, "description": "Monotonic per run. Used as SSE Last-Event-ID." },
+    "at":     { "type": "string", "format": "date-time" },
+    "type": {
+      "type": "string",
+      "enum": [
+        "run_created", "stage_changed", "baseline_confirmed",
+        "fault_confirmed", "tool_observation", "diagnosis_completed",
+        "evaluation_completed", "warning", "run_failed"
+      ]
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "QUEUED", "PREPARING", "BASELINE_READY", "INJECTING",
+        "FAULT_CONFIRMED", "INVESTIGATING", "DIAGNOSED",
+        "AWAITING_VERIFICATION", "VERIFYING", "COMPLETED",
+        "FAILED", "TIMED_OUT", "CANCELLED", "INTERRUPTED",
+        "UNSUPPORTED", "INVALID_SCENARIO"
+      ]
+    },
+    "message": { "type": "string" },
+    "payload": {
+      "type": "object",
+      "description": "Event-type specific data. Schema varies by type. Never contains ground truth or secrets."
+    }
+  }
+}

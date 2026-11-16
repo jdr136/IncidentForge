@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Node / Next.js
+apps/web/node_modules/
+apps/web/.next/
+apps/web/.env.local
+apps/web/tsconfig.tsbuildinfo
+
+# Data / local state
+data/*.db
+data/*.db-wal
+data/*.db-shm
+*.db
+*.db-wal
+*.db-shm
+
+# Environment
+.env
+.env.local
+
+# Kind / Kubernetes
+infra/kind/kubeconfig-*.yaml
+
+# AWS Emulator (generated credentials — never commit)
+infra/aws-emulator/*.pem
+infra/aws-emulator/credentials
+~/.aws/emulator/
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp

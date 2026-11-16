@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://incidentforge/schemas/scenario/v1.1.json",
+  "title": "IncidentForge Scenario Definition",
+  "description": "Versioned scenario definition. public fields may be served over API; all other fields are private to the trusted scenario controller and evaluator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "id", "version", "title",
+    "environment", "difficulty", "public", "setup", "fault", "private_expected"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.1"],
+      "description": "Scenario schema version. Loader rejects unknown versions."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Kebab-case unique scenario identifier."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonically increasing scenario version. Combined with id for unique lookup."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 5,
+      "description": "Short human-readable scenario title."
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["kubernetes", "aws"],
+      "description": "Target environment type. Selects the scenario adapter implementation."
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["beginner", "intermediate", "advanced"],
+      "description": "Approximate difficulty for display in UI."
+    },
+    "public": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "target"],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "Public description of the incident symptoms. Shared with the UI and investigator."
+        },
+        "target": {
+          "type": "string",
+          "description": "What the investigator is asked to do."
+        }
+      }
+    },
+    "setup": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "PRIVATE. Healthy baseline setup. Never returned over public API.",
+      "required": ["fixture", "baseline_checks"],
+      "properties": {
+        "fixture": {
+          "type": "string",
+          "description": "Path to baseline fixture file (relative to scenario directory)."
+        },
+        "baseline_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/check_spec" },
+          "description": "Predicates that must pass to confirm healthy baseline."
+        }
+      }
+    },
+    "fault": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "PRIVATE. Fault injection definition. Never returned over public API.",
+      "required": ["action", "ref", "manifestation_checks"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.]+$",
+          "description": "Typed action identifier dispatched by the environment adapter."
+        },
+        "ref": {
+          "type": "string",
+          "description": "Resource reference within the scenario fixture."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Action-specific parameters."
+        },
+        "manifestation_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/check_spec" },
+          "description": "Predicates that must pass to confirm the fault is observable. Failure = INVALID_SCENARIO."
+        }
+      }
+    },
+    "private_expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "PRIVATE. Ground truth for evaluation. Must never enter investigator context, prompts, or public API responses.",
+      "required": [
+        "allowed_root_cause_ids",
+        "required_evidence_types",
+        "allowed_remediations",
+        "post_fix_checks"
+      ],
+      "properties": {
+        "allowed_root_cause_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Canonical root cause ID and any accepted aliases. Diagnosis root_cause_id must match one of these (or be UNKNOWN). Schema v1.1 replaces the singular root_cause_id from v1.0."
+        },
+        "required_evidence_types": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tool names that must appear in cited evidence for full evidence score."
+        },
+        "allowed_remediations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Action types the investigator may propose. Anything else is POLICY_DENIED."
+        },
+        "post_fix_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/check_spec" },
+          "description": "Predicates that must ALL pass after remediation for verification_status=passed."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "check_spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "ref"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.]+$",
+          "description": "Check type dispatched by CheckRunner."
+        },
+        "ref": {
+          "type": "string",
+          "description": "Resource reference."
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Optional check-specific parameters."
+        }
+      }
+    }
+  }
+}

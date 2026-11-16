@@ -1,0 +1,49 @@
+schema_version: "1.1"
+id: k8s-readiness-path
+version: 1
+title: "API pods never become ready"
+environment: kubernetes
+difficulty: beginner
+
+public:
+  summary: >
+    The API Deployment was just updated but its pods are stuck in a not-ready
+    state. The Service has no healthy endpoints. The application container
+    itself is running and responding correctly on port 8080.
+  target: >
+    Diagnose the root cause of the readiness failure and propose the minimal
+    safe configuration fix.
+
+setup:
+  fixture: "fixtures/api-healthy.yaml"
+  baseline_checks:
+    - type: k8s.deployment_available
+      ref: api
+    - type: k8s.service_has_ready_endpoint
+      ref: api
+
+fault:
+  action: k8s.patch_readiness_path
+  ref: api
+  parameters:
+    path: "/health"          # app only serves /healthz — this is wrong
+  manifestation_checks:
+    - type: k8s.pod_not_ready
+      ref: api
+    - type: k8s.service_no_ready_endpoints
+      ref: api
+
+private_expected:
+  allowed_root_cause_ids:
+    - "K8S_READINESS_PATH_MISMATCH"
+    - "K8S_PROBE_MISCONFIGURATION"   # accepted alias
+  required_evidence_types:
+    - k8s.get_deployment
+    - k8s.list_pods
+  allowed_remediations:
+    - k8s.set_readiness_path
+  post_fix_checks:
+    - type: k8s.deployment_available
+      ref: api
+    - type: k8s.service_has_ready_endpoint
+      ref: api

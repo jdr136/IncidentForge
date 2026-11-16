@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://incidentforge/schemas/diagnosis/v1.0.json",
+  "title": "IncidentForge Diagnosis",
+  "description": "Structured output from the AI investigator. Unknown root_cause_ids, nonexistent evidence_ids, unapproved actions, and invalid target_refs make this INVALID.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "root_cause_id", "summary",
+    "confidence", "evidence_ids"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "root_cause_id": {
+      "type": "string",
+      "description": "Must be in scenario's allowed_root_cause_ids, or the special value UNKNOWN."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Human-readable explanation of the diagnosed root cause."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Model's self-reported confidence [0,1]. NOT a calibrated probability."
+    },
+    "evidence_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs of evidence items cited. Must reference real run-scoped evidence IDs."
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["root_cause_id", "why_less_likely"],
+        "properties": {
+          "root_cause_id": { "type": "string" },
+          "why_less_likely": { "type": "string" }
+        }
+      },
+      "description": "Alternative hypotheses considered and ruled out."
+    },
+    "remediation": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["action_type", "target_ref", "parameters"],
+          "properties": {
+            "action_type": {
+              "type": "string",
+              "pattern": "^[a-z0-9_.]+$"
+            },
+            "target_ref": { "type": "string" },
+            "parameters": { "type": "object" }
+          }
+        }
+      ],
+      "description": "Proposed typed remediation. null if the agent cannot propose a safe fix."
+    },
+    "limitations": {
+      "type": "string",
+      "description": "Optional: what evidence was unavailable or what uncertainty remains."
+    }
+  }
+}
