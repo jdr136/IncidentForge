@@ -1,0 +1,82 @@
+# Demo API — healthy baseline for IncidentForge Kubernetes scenarios
+# All resources labelled with app.kubernetes.io/part-of=incidentforge
+# so the controller can find and clean them up safely.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-nginx-config
+  labels:
+    app: api
+    app.kubernetes.io/part-of: incidentforge
+data:
+  default.conf: |
+    server {
+        listen 8080;
+        location /healthz {
+            return 200 "ok\n";
+            add_header Content-Type text/plain;
+        }
+        location / {
+            return 404;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  labels:
+    app: api
+    app.kubernetes.io/part-of: incidentforge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+        app.kubernetes.io/part-of: incidentforge
+    spec:
+      containers:
+        - name: api
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: api-nginx-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  labels:
+    app: api
+    app.kubernetes.io/part-of: incidentforge
+spec:
+  selector:
+    app: api
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
