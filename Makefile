@@ -69,8 +69,9 @@ kind-create: ## Create the incidentforge kind cluster (idempotent)
 		printf "  $(GREEN)✓$(RESET) kind cluster 'incidentforge' already exists\n"; \
 	else \
 		printf "$(BOLD)Creating kind cluster 'incidentforge'…$(RESET)\n"; \
-		kind create cluster --name incidentforge --config infra/kind/cluster.yaml; \
-		printf "$(GREEN)✓$(RESET) kind cluster created\n"; \
+		kind create cluster --name incidentforge --config infra/kind/cluster.yaml && \
+		printf "$(GREEN)✓$(RESET) kind cluster created\n" || \
+		(printf "$(RED)✗$(RESET) kind cluster creation failed — is Docker Desktop running?\n" && exit 1); \
 	fi
 
 .PHONY: kind-rbac
