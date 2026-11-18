@@ -60,7 +60,7 @@ install-python: ## Install Python dependencies via uv
 .PHONY: install-node
 install-node: ## Install Node.js dependencies
 	@printf "$(BOLD)Installing Node dependencies…$(RESET)\n"
-	cd $(WEB_DIR) && npm install --legacy-peer-deps --silent
+	cd "$(WEB_DIR)" && npm install --legacy-peer-deps --silent
 	@printf "$(GREEN)✓$(RESET) Node deps installed\n"
 
 .PHONY: kind-create
@@ -83,15 +83,15 @@ kind-rbac: ## Apply RBAC roles to the kind cluster
 .PHONY: dev-api
 dev-api: ## Start the FastAPI dev server on :8000 (auto-reload)
 	@printf "$(BOLD)Starting API server on http://127.0.0.1:8000$(RESET)\n"
-	cd $(API_DIR) && uv run --directory $(ROOT) uvicorn main:app \
+	cd "$(API_DIR)" && uv run --directory "$(ROOT)" uvicorn main:app \
 		--host 127.0.0.1 --port 8000 --reload \
-		--reload-dir $(ROOT)/contracts \
-		--reload-dir $(API_DIR)
+		--reload-dir "$(ROOT)/contracts" \
+		--reload-dir "$(API_DIR)"
 
 .PHONY: dev-web
 dev-web: ## Start the Next.js dev server on :3000
 	@printf "$(BOLD)Starting web server on http://localhost:3000$(RESET)\n"
-	cd $(WEB_DIR) && npm run dev
+	cd "$(WEB_DIR)" && npm run dev
 
 # ── Testing ──────────────────────────────────────────────────────────────────
 .PHONY: test
