@@ -16,7 +16,7 @@ from ulid import ULID
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", ".."))
 from app.api.dependencies import (
     get_kubernetes_adapter,
-    get_provider_adapter,
+    get_provider_for_run,
     get_scenario_registry,
     get_tool_gateway,
 )
@@ -128,7 +128,7 @@ async def start_run(
             run_id, request.scenario_id, run_repo, event_repo,
             scenario_adapter=get_kubernetes_adapter(),
             tool_gateway=get_tool_gateway(),
-            provider_adapter=get_provider_adapter(),
+            provider_adapter=get_provider_for_run(request.provider),
         ),
         name=f"orchestrate-{run_id}",
     )

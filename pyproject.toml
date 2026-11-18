@@ -17,6 +17,7 @@ dependencies = [
     "python-ulid>=3.0",
     "sse-starlette>=2.1",
     "openai>=1.50",
+    "anthropic>=1.0",
 ]
 
 [dependency-groups]
