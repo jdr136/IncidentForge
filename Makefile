@@ -137,7 +137,9 @@ demo: ## Reset lab and run the k8s-readiness-path scenario end to end
 .PHONY: benchmark
 benchmark: ## Run benchmark trials against all configured providers (make benchmark TRIALS=3)
 	@printf "$(BOLD)IncidentForge Benchmark$(RESET)\n"
-	@printf "Make sure dev-api is running: $(CYAN)make dev-api$(RESET)\n\n"
+	@curl -sf http://127.0.0.1:8000/health > /dev/null 2>&1 || \
+		(printf "$(RED)✗ API not running$(RESET) — start it first in another terminal:\n\n  $(CYAN)make dev-api$(RESET)\n\n" && exit 1)
+	@printf "API: $(GREEN)online$(RESET)\n\n"
 	python3 scripts/benchmark.py --trials $${TRIALS:-3} $${PROVIDER:+--provider $${PROVIDER}}
 
 # ── AWS Emulator ─────────────────────────────────────────────────────────────
