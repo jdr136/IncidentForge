@@ -28,7 +28,6 @@ from contracts.types import (
     ToolDefinition,
 )
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def make_incident() -> IncidentSummary:

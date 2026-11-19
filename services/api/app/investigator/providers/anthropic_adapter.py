@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from anthropic import AsyncAnthropic
@@ -62,7 +62,7 @@ class AnthropicProviderAdapter:
         seed: int | None = None,  # not supported by Anthropic; accepted for interface compat
         temperature: float = 0.0,
     ) -> InvestigationResult:
-        start = datetime.now(timezone.utc)
+        start = datetime.now(UTC)
         anthropic_tools = _build_anthropic_tools(tools)
         tool_call_records: list[ToolCallRecord] = []
         tool_calls_used = 0
@@ -126,7 +126,7 @@ class AnthropicProviderAdapter:
 
                 # Regular tool call
                 tool_calls_used += 1
-                call_start = datetime.now(timezone.utc)
+                call_start = datetime.now(UTC)
                 evidence = None
                 error_msg: str | None = None
 
@@ -142,7 +142,7 @@ class AnthropicProviderAdapter:
                     tool_result_content = json.dumps({"error": error_msg, "tool": block.name})
 
                 duration_ms = int(
-                    (datetime.now(timezone.utc) - call_start).total_seconds() * 1000
+                    (datetime.now(UTC) - call_start).total_seconds() * 1000
                 )
                 tool_call_records.append(ToolCallRecord(
                     sequence=len(tool_call_records) + 1,
@@ -173,7 +173,7 @@ class AnthropicProviderAdapter:
                 evidence_ids=[r.evidence_id for r in tool_call_records if r.evidence_id],
             )
 
-        total_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
+        total_ms = int((datetime.now(UTC) - start).total_seconds() * 1000)
         return InvestigationResult(
             run_id=context.run_id,
             tool_calls=tool_call_records,

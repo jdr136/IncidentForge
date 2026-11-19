@@ -77,8 +77,8 @@ def get_provider_for_run(provider_id: str):
 def get_tool_gateway():
     """Return the KubernetesToolGateway singleton, or None if k8s unavailable."""
     try:
-        from app.labs.kubernetes.clients import get_observer_client
         from app.investigator.gateway import KubernetesToolGateway
+        from app.labs.kubernetes.clients import get_observer_client
         client = get_observer_client()
         gw = KubernetesToolGateway(observer_client=client)
         logger.info("KubernetesToolGateway initialised")
@@ -92,8 +92,8 @@ def get_tool_gateway():
 def get_kubernetes_adapter():
     """Return the KubernetesAdapter singleton (scenario controller), or None."""
     try:
-        from app.labs.kubernetes.clients import get_controller_client
         from app.labs.kubernetes.adapter import KubernetesAdapter
+        from app.labs.kubernetes.clients import get_controller_client
         client = get_controller_client()
         adapter = KubernetesAdapter(
             controller_client=client,
