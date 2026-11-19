@@ -1,0 +1,50 @@
+schema_version: "1.1"
+id: k8s-crashloop-configmap
+version: 1
+title: "API pods crash-looping on startup"
+environment: kubernetes
+difficulty: intermediate
+
+public:
+  summary: >
+    The API deployment was updated and pods are now stuck in CrashLoopBackOff.
+    The pods start, run briefly, then exit. Restarting does not help.
+    Pod logs mention memory and a configuration error. The Service has no
+    healthy endpoints.
+  target: >
+    Determine the root cause of the CrashLoopBackOff and propose the
+    minimal fix to restore the deployment to a healthy state.
+
+setup:
+  fixture: "fixtures/api-healthy.yaml"
+  baseline_checks:
+    - type: k8s.deployment_available
+      ref: api
+    - type: k8s.service_has_ready_endpoint
+      ref: api
+
+fault:
+  action: k8s.corrupt_configmap_data
+  ref: api-config
+  parameters:
+    key: config.json
+    value: '{"version": "1.0", "port": INVALID_PORT_VALUE, "mode":}'
+  manifestation_checks:
+    - type: k8s.pod_crashloopbackoff
+      ref: api
+
+private_expected:
+  allowed_root_cause_ids:
+    - "K8S_CONFIGMAP_PARSE_ERROR"
+    - "K8S_APP_CONFIG_INVALID"
+    - "K8S_STARTUP_CONFIG_FAILURE"
+  required_evidence_types:
+    - k8s.get_pod_logs
+    - k8s.get_deployment
+  allowed_remediations:
+    - k8s.restore_configmap_from_fixture
+  post_fix_checks:
+    - type: k8s.deployment_available
+      ref: api
+    - type: k8s.service_has_ready_endpoint
+      ref: api

@@ -119,8 +119,16 @@ class KubernetesAdapter:
                 "POLICY_DENIED",
                 f"Action '{action.action_type}' not in allowed_remediations: {allowed}",
             )
+        parameters = dict(action.parameters)
+        # For restore actions, populate content from the fixture (trusted controller only).
+        if action.action_type == "k8s.restore_configmap_from_fixture":
+            fixture_content = self._load_configmap_data_from_fixture(
+                context, action.target_ref, parameters.get("key", "")
+            )
+            if fixture_content is not None:
+                parameters["content"] = fixture_content
         return await self._action_dispatcher.dispatch(
-            action.action_type, action.target_ref, context, action.parameters
+            action.action_type, action.target_ref, context, parameters
         )
 
     async def verify(self, context: RunContext) -> CheckResult:
@@ -153,6 +161,32 @@ class KubernetesAdapter:
             / "scenario.yaml"
         )
         return yaml.safe_load(path.read_text())
+
+    def _load_configmap_data_from_fixture(
+        self, context: RunContext, configmap_name: str, key: str
+    ) -> str | None:
+        """
+        Load the original value for a ConfigMap key from the scenario fixture.
+        Used by k8s.restore_configmap_from_fixture so the trusted controller
+        can restore content without the AI ever seeing the correct value.
+        """
+        private = self._load_scenario_private(context)
+        fixture_path = (
+            self._scenarios_root
+            / context.scenario_id
+            / f"v{context.scenario_version}"
+            / private["setup"]["fixture"]
+        )
+        if not fixture_path.exists():
+            logger.warning("Fixture not found for restore: %s", fixture_path)
+            return None
+        for doc in yaml.safe_load_all(fixture_path.read_text()):
+            if not doc:
+                continue
+            if doc.get("kind") == "ConfigMap" and doc.get("metadata", {}).get("name") == configmap_name:
+                return doc.get("data", {}).get(key)
+        logger.warning("ConfigMap '%s' key '%s' not found in fixture", configmap_name, key)
+        return None
 
     async def _apply_fixture(self, fixture_path: Path, namespace: str) -> CheckResult:
         if not fixture_path.exists():

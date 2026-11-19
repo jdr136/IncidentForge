@@ -134,6 +134,12 @@ demo: ## Reset lab and run the k8s-readiness-path scenario end to end
 	@printf "Make sure dev-api is running: $(CYAN)make dev-api$(RESET)\n\n"
 	bash scripts/demo.sh k8s-readiness-path openai gpt-4o
 
+.PHONY: benchmark
+benchmark: ## Run benchmark trials against all configured providers (make benchmark TRIALS=3)
+	@printf "$(BOLD)IncidentForge Benchmark$(RESET)\n"
+	@printf "Make sure dev-api is running: $(CYAN)make dev-api$(RESET)\n\n"
+	python3 scripts/benchmark.py --trials $${TRIALS:-3} $${PROVIDER:+--provider $${PROVIDER}}
+
 # ── AWS Emulator ─────────────────────────────────────────────────────────────
 .PHONY: emulator-build
 emulator-build: ## Build the AWS Emulator Docker image (Apple Silicon / aarch64)

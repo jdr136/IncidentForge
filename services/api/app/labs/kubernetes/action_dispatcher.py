@@ -87,3 +87,46 @@ async def _patch_service_selector(
         "SERVICE_SELECTOR_PATCHED",
         f"Service '{ref}' selector updated",
     )
+
+
+@_register("k8s.corrupt_configmap_data")
+async def _corrupt_configmap_data(
+    ref: str, context: RunContext, parameters: dict, api_client: ApiClient
+) -> CheckResult:
+    """Set a ConfigMap key to an invalid/corrupt value (fault injection)."""
+    key = parameters.get("key")
+    value = parameters.get("value")
+    if not key or value is None:
+        return CheckResult.fail("MISSING_PARAMETER", "parameters.key and parameters.value are required")
+    core_v1 = client.CoreV1Api(api_client)
+    patch = {"data": {key: value}}
+    core_v1.patch_namespaced_config_map(name=ref, namespace=context.namespace, body=patch)
+    return CheckResult.ok(
+        "CONFIGMAP_CORRUPTED",
+        f"ConfigMap '{ref}' key '{key}' set to invalid content",
+    )
+
+
+@_register("k8s.restore_configmap_from_fixture")
+async def _restore_configmap_from_fixture(
+    ref: str, context: RunContext, parameters: dict, api_client: ApiClient
+) -> CheckResult:
+    """
+    Restore a ConfigMap key to its fixture-original value (remediation).
+    The correct content is provided in parameters['content'] by the trusted
+    adapter (KubernetesAdapter.apply_remediation loads it from the fixture).
+    """
+    key = parameters.get("key")
+    content = parameters.get("content")
+    if not key or content is None:
+        return CheckResult.fail(
+            "MISSING_PARAMETER",
+            "parameters.key and parameters.content are required (populated by trusted controller)",
+        )
+    core_v1 = client.CoreV1Api(api_client)
+    patch = {"data": {key: content}}
+    core_v1.patch_namespaced_config_map(name=ref, namespace=context.namespace, body=patch)
+    return CheckResult.ok(
+        "CONFIGMAP_RESTORED",
+        f"ConfigMap '{ref}' key '{key}' restored to fixture content",
+    )

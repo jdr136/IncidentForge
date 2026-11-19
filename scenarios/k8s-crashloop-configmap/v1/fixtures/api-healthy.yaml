@@ -1,0 +1,137 @@
+# Demo API — healthy baseline for k8s-crashloop-configmap scenario
+# App reads a JSON config on startup; crashes if config is invalid.
+# Red herring: logs always include a memory line — not the cause of crashes.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-script
+  labels:
+    app: api
+    app.kubernetes.io/part-of: incidentforge
+data:
+  server.py: |
+    #!/usr/bin/env python3
+    """
+    IncidentForge demo API.
+    Reads /etc/app/config.json on startup; crashes if config is invalid.
+    """
+    import json, logging, sys
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    logging.info("Starting demo API v1.0.0")
+    # NOTE: This memory log is always emitted — it is NOT related to crashes.
+    logging.info("System memory check: 489MB available")
+
+    CONFIG_PATH = "/etc/app/config.json"
+    logging.info("Loading configuration from %s", CONFIG_PATH)
+
+    try:
+        with open(CONFIG_PATH) as f:
+            config = json.load(f)
+        logging.info("Configuration loaded: version=%s mode=%s",
+                     config.get("version", "?"), config.get("mode", "?"))
+    except json.JSONDecodeError as exc:
+        logging.error("Failed to parse %s: %s", CONFIG_PATH, exc)
+        logging.error("Application cannot start without valid JSON configuration")
+        sys.exit(1)
+    except FileNotFoundError:
+        logging.error("Configuration file not found: %s", CONFIG_PATH)
+        sys.exit(1)
+
+    PORT = int(config.get("port", 8080))
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/healthz":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"ok\n")
+            else:
+                self.send_response(404)
+                self.end_headers()
+        def log_message(self, *args):
+            pass
+
+    logging.info("Demo API ready on port %d", PORT)
+    HTTPServer(("", PORT), Handler).serve_forever()
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  labels:
+    app: api
+    app.kubernetes.io/part-of: incidentforge
+data:
+  config.json: |
+    {"version": "1.0", "port": 8080, "mode": "production"}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  labels:
+    app: api
+    app.kubernetes.io/part-of: incidentforge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+        app.kubernetes.io/part-of: incidentforge
+    spec:
+      containers:
+        - name: api
+          image: python:3.12-alpine
+          command: ["python3", "/etc/appscript/server.py"]
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: appscript
+              mountPath: /etc/appscript
+            - name: appconfig
+              mountPath: /etc/app
+      volumes:
+        - name: appscript
+          configMap:
+            name: api-script
+            defaultMode: 0755
+        - name: appconfig
+          configMap:
+            name: api-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  labels:
+    app: api
+    app.kubernetes.io/part-of: incidentforge
+spec:
+  selector:
+    app: api
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP

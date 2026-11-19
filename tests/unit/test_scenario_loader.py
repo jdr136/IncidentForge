@@ -123,12 +123,12 @@ class TestScenarioRegistry:
     def registry(cls):
         return ScenarioRegistry.load(SCENARIOS_ROOT)
 
-    def test_loads_all_three_scenarios(self, registry):
-        assert len(registry) == 3
+    def test_loads_all_scenarios(self, registry):
+        assert len(registry) >= 3  # grows as new scenarios are added
 
     def test_list_public_returns_all(self, registry):
         metas = registry.list_public()
-        assert len(metas) == 3
+        assert len(metas) >= 3
         ids = {m.id for m in metas}
         assert "k8s-readiness-path" in ids
         assert "k8s-service-selector" in ids

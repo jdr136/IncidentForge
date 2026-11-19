@@ -131,3 +131,29 @@ async def _service_no_ready_endpoints(
         "SERVICE_NO_READY_ENDPOINTS",
         f"Service '{check.ref}' has no ready endpoints — fault confirmed",
     )
+
+
+@_register("k8s.pod_crashloopbackoff")
+async def _pod_crashloopbackoff(check: CheckSpec, context: RunContext, api_client: ApiClient) -> CheckResult:
+    """Check that at least one pod for the given label (ref) is in CrashLoopBackOff."""
+    core_v1 = client.CoreV1Api(api_client)
+    pods = core_v1.list_namespaced_pod(
+        namespace=context.namespace,
+        label_selector=f"app={check.ref}",
+    )
+    if not pods.items:
+        return CheckResult.fail("NO_PODS_FOUND", f"No pods found with label app={check.ref}")
+    for pod in pods.items:
+        for cs in (pod.status.container_statuses or []):
+            waiting = cs.state.waiting if cs.state else None
+            if waiting and waiting.reason == "CrashLoopBackOff":
+                return CheckResult.ok(
+                    "POD_CRASHLOOPBACKOFF",
+                    f"Pod '{pod.metadata.name}' is in CrashLoopBackOff "
+                    f"(restarts: {cs.restart_count})",
+                    restart_count=cs.restart_count,
+                )
+    return CheckResult.fail(
+        "NO_CRASHLOOP",
+        f"No pods with label app={check.ref} are in CrashLoopBackOff — fault not confirmed",
+    )
